@@ -109,11 +109,10 @@ function GroupCard({ group, isAdmin }: { group: Group; isAdmin: boolean }) {
 export default function GruposPage() {
   const router = useRouter();
   const user = useCurrentUser();
+  const allGroups = useAllGroups();
 
   // Wait for user to load from localStorage
   if (!user) return null;
-
-  const allGroups = useAllGroups();
 
   // Groups where the user is the admin
   const adminGroups = allGroups.filter(g => g.admin.id === user.id);

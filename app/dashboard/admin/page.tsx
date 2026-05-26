@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Users, Copy, Check, CircleDollarSign, Clock } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
@@ -32,11 +32,19 @@ function AdminContent() {
   const groupId = searchParams.get("groupId");
   const group = allGroups.find(g => g.id === groupId) ?? allGroups[0];
 
+  // Hooks always before any early return
+  const [members, setMembers] = useState<GroupMember[]>([]);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Sync members when group loads from localStorage or changes
+  useEffect(() => {
+    if (group) {
+      setMembers(group.members.map(m => ({ ...m })));
+    }
+  }, [group?.id]);
+
   // Wait until groups are loaded from localStorage
   if (!group) return null;
-
-  const [members, setMembers] = useState<GroupMember[]>(group.members.map(m => ({ ...m })));
-  const [copiedLink, setCopiedLink] = useState(false);
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
@@ -328,7 +336,7 @@ function AdminContent() {
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Cuota por persona</span>
-              <span className="font-bold tabular-nums text-primary">{formatARS(members[0].amountDue)}</span>
+              <span className="font-bold tabular-nums text-primary">{formatARS(group.members[0].amountDue)}</span>
             </div>
             <Separator />
             <p className="text-xs text-muted-foreground">
