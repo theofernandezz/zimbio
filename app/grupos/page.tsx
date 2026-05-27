@@ -14,7 +14,7 @@ import { useCurrentUser } from "@/lib/hooks/use-current-user";
 
 // ─── Group card ───────────────────────────────────────────────────────────────
 
-function GroupCard({ group, isAdmin }: { group: Group; isAdmin: boolean }) {
+function GroupCard({ group, isAdmin, userId }: { group: Group; isAdmin: boolean; userId: string }) {
   const router = useRouter();
 
   const nonAdminMembers = group.members.slice(1);
@@ -25,8 +25,8 @@ function GroupCard({ group, isAdmin }: { group: Group; isAdmin: boolean }) {
     ? `/dashboard/admin?groupId=${group.id}`
     : `/dashboard/participante?groupId=${group.id}`;
 
-  // For participant: find their own member entry to show their status
-  const myEntry = isAdmin ? null : nonAdminMembers.find(m => m.paymentStatus !== undefined);
+  // For participant: find their own member entry to show their payment status
+  const myEntry = isAdmin ? null : group.members.find(m => m.user.id === userId);
   const myIsPaid = myEntry?.paymentStatus === PAYMENT_STATUS.Paid;
 
   return (
@@ -150,7 +150,7 @@ export default function GruposPage() {
                 </p>
                 <div className="space-y-3">
                   {adminGroups.map(group => (
-                    <GroupCard key={group.id} group={group} isAdmin />
+                    <GroupCard key={group.id} group={group} isAdmin userId={user.id} />
                   ))}
                 </div>
               </section>
@@ -163,7 +163,7 @@ export default function GruposPage() {
                 </p>
                 <div className="space-y-3">
                   {participantGroups.map(group => (
-                    <GroupCard key={group.id} group={group} isAdmin={false} />
+                    <GroupCard key={group.id} group={group} isAdmin={false} userId={user.id} />
                   ))}
                 </div>
               </section>

@@ -24,13 +24,14 @@ export function saveGroupToStorage(group: Group): void {
 }
 
 /**
- * Returns user-created groups from localStorage.
- * Falls back to MOCK_GROUPS only when nothing has been created yet
- * (demo context: Mateo/Sofia pre-loaded data).
+ * Returns all groups: user-created (localStorage) merged with MOCK_GROUPS.
+ * Stored groups take precedence if IDs collide (e.g. an updated mock group).
  */
 export function getAllGroups(): Group[] {
   const stored = getStoredGroups();
-  return stored.length > 0 ? stored : [...MOCK_GROUPS];
+  const storedIds = new Set(stored.map((g) => g.id));
+  const mocks = MOCK_GROUPS.filter((g) => !storedIds.has(g.id));
+  return [...stored, ...mocks];
 }
 
 // ─── Build a Group from the create-form data ──────────────────────────────────
