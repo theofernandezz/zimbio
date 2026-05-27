@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { findUserByCredentials } from "@/lib/mock-data";
+import { findUserByCredentials, userHasGroup } from "@/lib/mock-data";
 import { USER_ROLES, type User } from "@/lib/types";
 
 // ─── Google icon (inline SVG — no extra dep) ─────────────────────────────────
@@ -81,7 +81,13 @@ export function LoginForm() {
       localStorage.setItem("zimbio_user", JSON.stringify(user));
     }
 
-    router.push("/home");
+    if (user.role === USER_ROLES.Admin) {
+      router.push("/home");
+    } else if (userHasGroup(user.id)) {
+      router.push("/dashboard/participante");
+    } else {
+      router.push("/home");
+    }
   }
 
   return (

@@ -236,3 +236,12 @@ export function findUserByCredentials(
       u.password === password,
   ) ?? null;
 }
+
+/**
+ * Returns true if the user belongs to at least one group (as admin or member).
+ */
+export function userHasGroup(userId: string): boolean {
+  return MOCK_GROUPS.some((g) =>
+    g.members.some((m) => m.user.id === userId),
+  );
+}
