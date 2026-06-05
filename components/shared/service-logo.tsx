@@ -84,14 +84,16 @@ const SERVICE_CONFIG: Record<ServiceType, ServiceConfig> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface ServiceLogoProps {
-  service: ServiceType;
+  // Acepta ServiceType o string (para datos de DB)
+  service: ServiceType | string;
   /** Tailwind size class + any extra classes (e.g. "size-10 rounded-xl") */
   className?: string;
   style?: React.CSSProperties;
 }
 
 export function ServiceLogo({ service, className, style }: ServiceLogoProps) {
-  const config = SERVICE_CONFIG[service];
+  const config =
+    SERVICE_CONFIG[service as ServiceType] ?? SERVICE_CONFIG["other"];
 
   return (
     <span

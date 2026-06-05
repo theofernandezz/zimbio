@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String?  @map("password_hash") // null para usuarios de Google
+  googleId     String?  @unique @map("google_id")
+  avatarColor  String   @map("avatar_color")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  adminOf     Group[]       @relation("GroupAdmin")
+  memberships GroupMember[]
+
+  @@index([email])
+  @@map("users")
+}
+
+// ─── Services & Plans ────────────────────────────────────────────────────────
+
+// Servicios de streaming — cargados via seed, no se crean desde la app
+model Service {
+  id         String @id @default(cuid())
+  name       String
+  type       String @unique // "netflix" | "spotify" | etc.
+  brandColor String @map("brand_color")
+
+  plans ServicePlan[]
+
+  @@map("services")
+}
+
+// Planes compartidos (2+ personas). Solo planes familiares/grupales.
+// Los planes individuales no existen en Zimbio.
+model ServicePlan {
+  id           String   @id @default(cuid())
+  serviceId    String   @map("service_id")
+  name         String   // "Premium (4 pantallas)", "Familiar", "Dúo"
+  basePriceArs Float    @map("base_price_ars") // sin IVA — se actualiza manualmente
+  maxMembers   Int      @map("max_members")    // límite máximo del plan
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  service Service @relation(fields: [serviceId], references: [id])
+  groups  Group[]
+
+  @@unique([serviceId, name])
+  @@map("service_plans")
+}
+
+// ─── Groups ───────────────────────────────────────────────────────────────────
+
+model Group {
+  id            String   @id @default(cuid())
+  name          String
+  adminId       String   @map("admin_id")
+  maxMembers    Int      @map("max_members")    // elegido por el admin al crear el grupo
+  paymentMethod String   @map("payment_method") // "tarjeta_pesificada" | "mercado_pago"
+  monthlyTotal  Float    @map("monthly_total")  // ARS con IVA — confirmado por el admin
+  alias         String   // Mercado Pago alias para recibir pagos
+  cvu           String   // CVU para transferencias bancarias
+  billingCycle  String   @map("billing_cycle")  // "Mayo 2026"
+  inviteToken   String   @unique @map("invite_token")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  admin        User          @relation("GroupAdmin", fields: [adminId], references: [id])
+  servicePlans ServicePlan[]
+  members      GroupMember[]
+  vault        VaultEntry?
+
+  @@index([adminId])
+  @@index([inviteToken])
+  @@map("groups")
+}
+
+// ─── Group Members ────────────────────────────────────────────────────────────
+
+model GroupMember {
+  id            String   @id @default(cuid())
+  groupId       String   @map("group_id")
+  userId        String   @map("user_id")
+  paymentStatus String   @default("pending") @map("payment_status") // "pending" | "paid" | "overdue"
+  amountDue     Float    @map("amount_due")               // ARS — cuota por persona
+  amountPaid    Float    @default(0) @map("amount_paid")  // ARS — lo que ya pagó
+  joinedAt      DateTime @default(now()) @map("joined_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@map("group_members")
+}
+
+// ─── Vault ────────────────────────────────────────────────────────────────────
+
+// Credenciales del servicio que el admin carga para los participantes
+// TODO: encriptar email y password con AES-256 antes de producción real
+model VaultEntry {
+  id       String @id @default(cuid())
+  groupId  String @unique @map("group_id")
+  email    String
+  password String // ⚠️ plaintext por ahora
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@map("vault_entries")
+}

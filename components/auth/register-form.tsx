@@ -1,73 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Eye, EyeOff, AlertCircle, CheckCircle2, UserRound, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, UserRound, Mail, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { USER_ROLES, type User } from "@/lib/types";
+import { registerAction, type RegisterState } from "@/app/(auth)/register/actions";
 
-// ─── Password strength ───────────────────────────────────────────────────────
+// ─── Password strength ────────────────────────────────────────────────────────
 
 type StrengthLevel = "empty" | "weak" | "fair" | "strong";
 
 function getPasswordStrength(password: string): StrengthLevel {
   if (!password) return "empty";
   if (password.length < 6) return "weak";
-  const hasLower = /[a-z]/.test(password);
-  const hasUpper = /[A-Z]/.test(password);
-  const hasDigit = /\d/.test(password);
-  const hasSpecial = /[^a-zA-Z0-9]/.test(password);
-  const score = [hasLower, hasUpper, hasDigit, hasSpecial, password.length >= 10].filter(Boolean).length;
+  const score = [
+    /[a-z]/.test(password),
+    /[A-Z]/.test(password),
+    /\d/.test(password),
+    /[^a-zA-Z0-9]/.test(password),
+    password.length >= 10,
+  ].filter(Boolean).length;
   if (score <= 2) return "weak";
   if (score <= 3) return "fair";
   return "strong";
 }
 
-const STRENGTH_CONFIG: Record<
-  StrengthLevel,
-  { label: string; color: string; bars: number }
-> = {
-  empty:  { label: "",          color: "bg-border",       bars: 0 },
-  weak:   { label: "Débil",     color: "bg-destructive",  bars: 1 },
-  fair:   { label: "Regular",   color: "bg-amber-400",    bars: 2 },
-  strong: { label: "Segura",    color: "bg-emerald-500",  bars: 3 },
+const STRENGTH_CONFIG: Record<StrengthLevel, { label: string; color: string; bars: number }> = {
+  empty:  { label: "",        color: "bg-border",      bars: 0 },
+  weak:   { label: "Débil",   color: "bg-destructive", bars: 1 },
+  fair:   { label: "Regular", color: "bg-amber-400",   bars: 2 },
+  strong: { label: "Segura",  color: "bg-emerald-500", bars: 3 },
 };
 
 function PasswordStrengthBar({ password }: { password: string }) {
-  const strength = getPasswordStrength(password);
-  const { label, color, bars } = STRENGTH_CONFIG[strength];
-
   if (!password) return null;
-
+  const { label, color, bars } = STRENGTH_CONFIG[getPasswordStrength(password)];
   return (
     <div className="space-y-1">
       <div className="flex gap-1">
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className={cn(
-              "h-1 flex-1 rounded-full transition-colors duration-300",
-              i <= bars ? color : "bg-border",
-            )}
+            className={cn("h-1 flex-1 rounded-full transition-colors duration-300", i <= bars ? color : "bg-border")}
           />
         ))}
       </div>
-      {label && (
-        <p className="text-xs text-muted-foreground">
-          Contraseña <span className="font-medium">{label}</span>
-        </p>
-      )}
+      {label && <p className="text-xs text-muted-foreground">Contraseña <span className="font-medium">{label}</span></p>}
     </div>
   );
 }
 
-// ─── Google icon ─────────────────────────────────────────────────────────────
+// ─── Google icon ──────────────────────────────────────────────────────────────
 
 function GoogleIcon() {
   return (
@@ -82,81 +70,12 @@ function GoogleIcon() {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function RegisterForm() {
-  const router = useRouter();
+const initialState: RegisterState = {};
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+export function RegisterForm({ redirectTo }: { redirectTo?: string }) {
+  const [state, formAction, isPending] = useActionState(registerAction, initialState);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  function handleGoogleMock(e: React.MouseEvent) {
-    e.preventDefault();
-    setError("Google Auth estará disponible próximamente.");
-  }
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
-
-    if (!name.trim() || !email || !password) {
-      setError("Completá todos los campos.");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres.");
-      return;
-    }
-
-    const strength = getPasswordStrength(password);
-    if (strength === "weak") {
-      setError("La contraseña es demasiado simple. Agregá mayúsculas o números.");
-      return;
-    }
-
-    setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 700));
-
-    // In a real app: POST /api/auth/register
-    // For the prototype: create a session and redirect
-    const newUser: User = {
-      id: `usr_${Date.now()}`,
-      name: name.trim(),
-      email: email.toLowerCase(),
-      password, // plaintext — prototype only
-      role: USER_ROLES.Admin, // new users start as admins (can create groups)
-      avatarInitials: name.trim().split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase(),
-      avatarColor: "#0061FF",
-    };
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem("zimbio_user", JSON.stringify(newUser));
-    }
-
-    setSuccess(true);
-    setIsLoading(false);
-
-    await new Promise((r) => setTimeout(r, 800));
-    router.push("/home");
-  }
-
-  if (success) {
-    return (
-      <div className="rounded-xl border border-border bg-card p-8 shadow-sm text-center space-y-3">
-        <div className="flex justify-center">
-          <div className="flex items-center justify-center size-14 rounded-full bg-primary/10">
-            <CheckCircle2 className="size-7 text-primary" />
-          </div>
-        </div>
-        <h2 className="text-xl font-bold text-foreground">¡Cuenta creada!</h2>
-        <p className="text-sm text-muted-foreground">Redirigiendo al dashboard...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
@@ -170,15 +89,12 @@ export function RegisterForm() {
         </p>
       </div>
 
-      {/* Google */}
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full gap-2 mb-4"
-        onClick={handleGoogleMock}
-      >
-        <GoogleIcon />
-        Registrarse con Google
+      {/* Google OAuth */}
+      <Button variant="outline" className="w-full gap-2 mb-4" asChild>
+        <a href="/api/auth/google">
+          <GoogleIcon />
+          Registrarse con Google
+        </a>
       </Button>
 
       <div className="flex items-center gap-3 mb-4">
@@ -190,22 +106,28 @@ export function RegisterForm() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        {/* Name */}
+      <form action={formAction} noValidate className="space-y-4">
+        {redirectTo && (
+          <input type="hidden" name="redirectTo" value={redirectTo} />
+        )}
+        {/* Nombre */}
         <div className="space-y-1.5">
           <Label htmlFor="name">Nombre completo</Label>
           <div className="relative">
             <UserRound className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               id="name"
+              name="name"
               type="text"
               placeholder="Ej. Juan Pérez"
               autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
               className="pl-9"
+              aria-invalid={!!state.errors?.name}
             />
           </div>
+          {state.errors?.name && (
+            <p className="text-sm text-destructive">{state.errors.name[0]}</p>
+          )}
         </div>
 
         {/* Email */}
@@ -215,15 +137,17 @@ export function RegisterForm() {
             <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               id="email"
+              name="email"
               type="email"
               placeholder="tu@email.com"
               autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               className="pl-9"
-              aria-invalid={!!error}
+              aria-invalid={!!state.errors?.email}
             />
           </div>
+          {state.errors?.email && (
+            <p className="text-sm text-destructive">{state.errors.email[0]}</p>
+          )}
         </div>
 
         {/* Password */}
@@ -233,13 +157,14 @@ export function RegisterForm() {
             <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               id="password"
+              name="password"
               type={showPassword ? "text" : "password"}
               placeholder="Mínimo 8 caracteres"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="pl-9 pr-10"
-              aria-invalid={!!error}
+              aria-invalid={!!state.errors?.password}
             />
             <button
               type="button"
@@ -251,36 +176,32 @@ export function RegisterForm() {
             </button>
           </div>
           <PasswordStrengthBar password={password} />
+          {state.errors?.password && (
+            <p className="text-sm text-destructive">{state.errors.password[0]}</p>
+          )}
         </div>
 
-        {/* Error */}
-        {error && (
+        {/* Error general */}
+        {state.errors?._form && (
           <div
             role="alert"
             className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2.5 text-sm text-destructive"
           >
             <AlertCircle className="size-4 shrink-0" />
-            {error}
+            {state.errors._form[0]}
           </div>
         )}
 
         {/* Submit */}
-        <Button
-          type="submit"
-          className={cn("w-full", isLoading && "opacity-70 cursor-not-allowed")}
-          disabled={isLoading}
-        >
-          {isLoading ? "Creando cuenta..." : "Crear cuenta"}
+        <Button type="submit" className="w-full" disabled={isPending}>
+          {isPending ? "Creando cuenta..." : "Crear cuenta"}
         </Button>
       </form>
 
       {/* Footer */}
       <p className="mt-5 text-center text-sm text-muted-foreground">
         ¿Ya tenés cuenta?{" "}
-        <Link
-          href="/login"
-          className="font-medium text-primary hover:underline"
-        >
+        <Link href="/login" className="font-medium text-primary hover:underline">
           Iniciar sesión
         </Link>
       </p>

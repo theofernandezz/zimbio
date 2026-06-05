@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Vault, Settings } from "lucide-react";
+import { Users, KeyRound, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { label: "Grupos",      href: "/grupos",    Icon: Users },
-  { label: "Vault",       href: "/vault",     Icon: Vault },
-  { label: "Ajustes",     href: "/settings",  Icon: Settings },
+  { label: "Grupos",   href: "/grupos",   Icon: Users },
+  { label: "Accesos",  href: "/accesos",  Icon: KeyRound },
+  { label: "Ajustes",  href: "/settings", Icon: Settings },
 ] as const;
 
 export function BottomNav() {

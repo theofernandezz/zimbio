@@ -1,87 +1,83 @@
-import type { TaxBreakdown } from "./types";
+// ─── Impuestos vigentes en Argentina para servicios digitales (2024–) ─────────
+//
+// IVA:         21% — siempre aplica
+// PAIS:        eliminado septiembre 2024 — ya no aplica
+// Ganancias:   eliminado junto al PAIS en 2024 — ya no aplica
+// IIBB:        varía por provincia (3–5%) — ignorado en MVP
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-/**
- * Argentine digital services tax rates (2024).
- * Applied on the ARS-converted base price.
- *
- * IVA:        21%  — Impuesto al Valor Agregado
- * PAIS:       7.5% — Impuesto PAIS (post-reducción septiembre 2024)
- * Percepción: 45%  — Percepción AFIP sobre compras digitales en el exterior
- *
- * Effective rate: ~73.5% over the base price.
- */
 export const TAX_RATES = {
   IVA: 0.21,
-  PAIS: 0.075,
-  PERCEPCION: 0.45,
 } as const;
 
+export const PAYMENT_METHODS = {
+  tarjeta_pesificada: "tarjeta_pesificada",
+  mercado_pago: "mercado_pago",
+} as const;
+
+export type PaymentMethod =
+  (typeof PAYMENT_METHODS)[keyof typeof PAYMENT_METHODS];
+
+const PAYMENT_METHOD_MULTIPLIERS: Record<PaymentMethod, number> = {
+  tarjeta_pesificada: 1 + TAX_RATES.IVA, // 1.21
+  mercado_pago: 1 + TAX_RATES.IVA,       // 1.21
+};
+
+// ─── Core functions ───────────────────────────────────────────────────────────
+
 /**
- * Mock USD → ARS exchange rate.
- * In production: fetch from dolarapi.com or similar.
+ * Calcula el precio final en ARS aplicando IVA según el método de pago.
+ * @param basePriceArs - Precio base del plan sin impuestos
+ * @param paymentMethod - Método de pago seleccionado
  */
-export const MOCK_USD_TO_ARS = 1250;
-
-// ─── Core functions ──────────────────────────────────────────────────────────
+export function calculateMonthlyTotal(
+  basePriceArs: number,
+  paymentMethod: PaymentMethod,
+): number {
+  return Math.round(basePriceArs * PAYMENT_METHOD_MULTIPLIERS[paymentMethod]);
+}
 
 /**
- * Calculates the full ARS cost breakdown for a USD-priced digital subscription.
- *
- * @param basePriceUSD  - Subscription price in USD (e.g. 7.20 for Netflix Standard)
- * @param exchangeRate  - ARS per 1 USD (defaults to mock rate)
- * @returns TaxBreakdown with all line items and totals
+ * Divide el total mensual entre los miembros del grupo.
+ * @param monthlyTotal - Total con IVA en ARS
+ * @param memberCount  - Cantidad de miembros (mínimo 2)
  */
-export function calculateTaxBreakdown(
-  basePriceUSD: number,
-  exchangeRate: number = MOCK_USD_TO_ARS,
-): TaxBreakdown {
-  const basePriceARS = basePriceUSD * exchangeRate;
-  const ivaAmount = basePriceARS * TAX_RATES.IVA;
-  const paisAmount = basePriceARS * TAX_RATES.PAIS;
-  const percepcionAmount = basePriceARS * TAX_RATES.PERCEPCION;
-  const totalARS = basePriceARS + ivaAmount + paisAmount + percepcionAmount;
-  const effectiveTaxRate = (totalARS - basePriceARS) / basePriceARS;
+export function calculateMemberShare(
+  monthlyTotal: number,
+  memberCount: number,
+): number {
+  if (memberCount < 2) throw new Error("Un grupo requiere al menos 2 miembros");
+  return Math.round(monthlyTotal / memberCount);
+}
 
+// ─── Alias de compatibilidad — DEPRECATED ────────────────────────────────────
+// TODO: eliminar cuando grupos/creado y grupos/crear sean reescritos con DB real
+
+/** @deprecated Usar calculateMemberShare */
+export const calculatePerPersonShare = calculateMemberShare;
+
+/** @deprecated Los precios ya no son en USD. Usar calculateMonthlyTotal con basePriceArs. */
+export function calculateTaxBreakdown(basePriceArs: number) {
+  const totalARS = Math.round(basePriceArs * 1.21);
   return {
-    basePriceARS,
-    ivaAmount,
-    paisAmount,
-    percepcionAmount,
+    basePriceARS: basePriceArs,
+    ivaAmount: Math.round(basePriceArs * 0.21),
+    paisAmount: 0,
+    percepcionAmount: 0,
     totalARS,
-    effectiveTaxRate,
+    effectiveTaxRate: 0.21,
   };
 }
 
-/**
- * Splits the total ARS cost equally among all group members.
- */
-export function calculatePerPersonShare(
-  totalARS: number,
-  memberCount: number,
-): number {
-  if (memberCount <= 0) throw new Error("memberCount must be at least 1");
-  return totalARS / memberCount;
-}
-
-// ─── Formatting ──────────────────────────────────────────────────────────────
+// ─── Formatting ───────────────────────────────────────────────────────────────
 
 /**
- * Formats a number as Argentine Pesos (ARS), e.g. "$15.613,27".
+ * Formatea un número como pesos argentinos: "$15.613".
  */
 export function formatARS(amount: number): string {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency: "ARS",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount);
-}
-
-/**
- * Formats a percentage as a string, e.g. "73.5%".
- */
-export function formatTaxRate(rate: number): string {
-  return `${(rate * 100).toFixed(1)}%`;
 }

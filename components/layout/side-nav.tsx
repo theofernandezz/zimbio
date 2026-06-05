@@ -1,26 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Users, Vault, Settings, LogOut } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Users, KeyRound, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCurrentUser } from "@/lib/hooks/use-current-user";
+import { logoutAction } from "@/app/actions/logout";
+import type { UserPublic } from "@/lib/services/users";
+
+function getInitials(name: string): string {
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+}
 
 const NAV_ITEMS = [
   { label: "Grupos",   href: "/grupos",   Icon: Users },
-  { label: "Vault",    href: "/vault",    Icon: Vault },
+  { label: "Accesos",  href: "/accesos",  Icon: KeyRound },
   { label: "Ajustes",  href: "/settings", Icon: Settings },
 ] as const;
 
-export function SideNav() {
+export function SideNav({ user }: { user: UserPublic | null }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const user = useCurrentUser();
-
-  function handleLogout() {
-    localStorage.removeItem("zimbio_user");
-    router.push("/login");
-  }
 
   return (
     <aside className="hidden md:flex flex-col w-60 shrink-0 h-screen overflow-hidden bg-card border-r border-border">
@@ -59,7 +57,7 @@ export function SideNav() {
               className="flex items-center justify-center size-8 rounded-full text-xs font-bold text-white shrink-0"
               style={{ backgroundColor: user.avatarColor }}
             >
-              {user.avatarInitials}
+              {getInitials(user.name)}
             </div>
             <div className="min-w-0">
               <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
@@ -67,13 +65,15 @@ export function SideNav() {
             </div>
           </div>
         )}
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-        >
-          <LogOut className="size-4.5 shrink-0" strokeWidth={1.8} />
-          Cerrar sesión
-        </button>
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          >
+            <LogOut className="size-4.5 shrink-0" strokeWidth={1.8} />
+            Cerrar sesión
+          </button>
+        </form>
       </div>
     </aside>
   );

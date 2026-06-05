@@ -1,12 +1,13 @@
 "use client";
 
 import { Bell } from "lucide-react";
-import { useCurrentUser } from "@/lib/hooks/use-current-user";
+import type { UserPublic } from "@/lib/services/users";
 
-/** Mobile-only top bar — hidden on md+ (sidebar takes over). */
-export function TopAppBar() {
-  const user = useCurrentUser();
+function getInitials(name: string): string {
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+}
 
+export function TopAppBar({ user }: { user: UserPublic | null }) {
   return (
     <header className="md:hidden sticky top-0 z-40 flex items-center justify-between bg-secondary/80 backdrop-blur-sm border-b border-border px-5 h-14">
       {/* Avatar */}
@@ -15,7 +16,7 @@ export function TopAppBar() {
         style={{ backgroundColor: user?.avatarColor ?? "#0061FF" }}
         aria-label={`Avatar de ${user?.name ?? "usuario"}`}
       >
-        {user?.avatarInitials ?? "?"}
+        {user ? getInitials(user.name) : "?"}
       </div>
 
       {/* Brand */}

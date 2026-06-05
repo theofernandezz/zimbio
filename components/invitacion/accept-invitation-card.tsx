@@ -1,65 +1,76 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useFormStatus } from "react-dom";
+import Link from "next/link";
+import { Shield, Check, Loader2, Users, LogIn, UserPlus } from "lucide-react";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { MOCK_GROUPS } from "@/lib/mock-data";
-import { formatARS, calculatePerPersonShare } from "@/lib/tax-engine";
+import { ServiceLogo } from "@/components/shared/service-logo";
+import { formatARS } from "@/lib/tax-engine";
 import { cn } from "@/lib/utils";
-import {
-  Shield,
-  Check,
-  Loader2,
-  HelpCircle,
-} from "lucide-react";
+import { joinGroupAction } from "@/app/invitacion/[token]/actions";
+import type { GroupDetail } from "@/lib/services/groups";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Submit button con estado de carga ────────────────────────────────────────
 
-const INVITATION_STATE = {
-  idle: "idle",
-  accepting: "accepting",
-  accepted: "accepted",
-} as const;
+function JoinButton() {
+  const { pending } = useFormStatus();
 
-type InvitationState =
-  (typeof INVITATION_STATE)[keyof typeof INVITATION_STATE];
+  return (
+    <Button
+      type="submit"
+      disabled={pending}
+      className={cn(
+        "w-full transition-all duration-300",
+        pending && "opacity-80",
+      )}
+      aria-busy={pending}
+    >
+      {pending ? (
+        <>
+          <Loader2 className="size-4 animate-spin mr-2" aria-hidden />
+          Procesando...
+        </>
+      ) : (
+        <>
+          <Check className="size-4 mr-2" aria-hidden />
+          Aceptar y unirme al grupo
+        </>
+      )}
+    </Button>
+  );
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface AcceptInvitationCardProps {
+  group: GroupDetail;
   token: string;
+  isLoggedIn: boolean;
+  isMember: boolean;
+  isFull: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function AcceptInvitationCard({ token: _token }: AcceptInvitationCardProps) {
-  const router = useRouter();
-  const [state, setState] = useState<InvitationState>(INVITATION_STATE.idle);
-
-  // Mock: siempre muestra MOCK_GROUPS[0] independientemente del token
-  const group = MOCK_GROUPS[0];
-  const perPersonShare = calculatePerPersonShare(
-    group.taxBreakdown.totalARS,
-    group.members.length
+export function AcceptInvitationCard({
+  group,
+  token,
+  isLoggedIn,
+  isMember,
+  isFull,
+}: AcceptInvitationCardProps) {
+  const sharePerPerson = Math.round(
+    group.monthlyTotal / group.maxMembers,
   );
-
-  async function handleAccept() {
-    setState(INVITATION_STATE.accepting);
-
-    await new Promise<void>((resolve) => setTimeout(resolve, 1000));
-    setState(INVITATION_STATE.accepted);
-
-    setTimeout(() => {
-      router.push("/dashboard/participante");
-    }, 1500);
-  }
-
-  const isAccepting = state === INVITATION_STATE.accepting;
-  const isAccepted = state === INVITATION_STATE.accepted;
+  const invitePath = `/invitacion/${token}`;
 
   return (
     <Card className="w-full max-w-md shadow-lg border-border">
       <CardContent className="pt-8 pb-7 px-7 space-y-6">
+
         {/* Eyebrow */}
         <div className="space-y-2 text-center">
           <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -68,101 +79,97 @@ export function AcceptInvitationCard({ token: _token }: AcceptInvitationCardProp
           <h1 className="text-xl font-semibold text-foreground leading-snug">
             <span className="font-bold">{group.admin.name}</span> te invitó a
             compartir{" "}
-            <span className="font-bold">{group.service.name}</span>
+            <span className="font-bold">
+              {group.servicePlans.map((sp) => sp.service.name).join(" + ")}
+            </span>
           </h1>
         </div>
 
-        {/* Service sub-card */}
+        {/* Service card */}
         <div className="rounded-xl bg-muted/50 border border-border p-4 space-y-3">
-          {/* Service row */}
-          <div className="flex items-center gap-2.5">
-            <span
-              className="size-2.5 rounded-full shrink-0"
-              style={{ backgroundColor: group.service.brandColor }}
-              aria-hidden="true"
-            />
-            <span className="text-sm font-semibold text-foreground">
-              {group.service.name}
-            </span>
-            <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
-              {group.maxMembers} Pantallas / Plan familiar
+          <div className="flex items-center gap-3">
+            <div className="flex -space-x-2 shrink-0">
+              {group.servicePlans.map((sp) => (
+                <ServiceLogo
+                  key={sp.id}
+                  service={sp.service.type}
+                  className="size-10 rounded-xl ring-2 ring-background"
+                />
+              ))}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate">
+                {group.name}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {group.servicePlans.map((sp) => sp.name).join(" + ")}
+              </p>
+            </div>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+              <Users className="size-3" />
+              {group.members.length}/{group.maxMembers}
             </span>
           </div>
 
           <Separator />
 
-          {/* Amount */}
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
               Tu cuota mensual
             </p>
             <p className="text-3xl font-bold text-primary tabular-nums tracking-tight">
-              {formatARS(perPersonShare)}
+              {formatARS(sharePerPerson)}
             </p>
             <p className="text-xs text-muted-foreground">
-              Mensual — Próximo cobro: {group.billingCycle}
+              {group.billingCycle} · {group.billingCycle}
             </p>
           </div>
         </div>
 
         {/* Trust badge */}
         <div className="flex items-center justify-center gap-1.5 rounded-full bg-muted/60 border border-border px-4 py-2 text-xs text-muted-foreground">
-          <Shield className="size-3.5 shrink-0" aria-hidden="true" />
+          <Shield className="size-3.5 shrink-0" aria-hidden />
           Administrado de forma segura por{" "}
           <span className="font-semibold text-primary">Zimbio</span>
         </div>
 
-        {/* CTA */}
+        {/* CTA — varía según estado */}
         <div className="space-y-3">
-          <Button
-            onClick={handleAccept}
-            disabled={isAccepting || isAccepted}
-            className={cn(
-              "w-full transition-all duration-300",
-              isAccepted && "bg-emerald-600 hover:bg-emerald-600 text-white"
-            )}
-            aria-busy={isAccepting}
-          >
-            {isAccepting ? (
-              <>
-                <Loader2 className="size-4 animate-spin mr-2" aria-hidden="true" />
-                Procesando...
-              </>
-            ) : isAccepted ? (
-              <>
-                <Check className="size-4 mr-2" aria-hidden="true" />
-                ¡Te uniste al grupo!
-              </>
-            ) : (
-              "Aceptar y unirme al grupo"
-            )}
-          </Button>
-
-          {isAccepted && (
-            <p
-              role="status"
-              aria-live="polite"
-              className="text-center text-xs text-muted-foreground animate-pulse"
-            >
-              Redirigiendo a tu dashboard...
-            </p>
+          {isFull ? (
+            <div className="rounded-lg bg-muted/60 border border-border px-4 py-3 text-center text-sm text-muted-foreground">
+              Este grupo ya está completo
+            </div>
+          ) : isMember ? (
+            <Button asChild className="w-full">
+              <Link href={`/dashboard/participante?groupId=${group.id}`}>
+                <Check className="size-4 mr-2" />
+                Ya sos miembro — ir al dashboard
+              </Link>
+            </Button>
+          ) : isLoggedIn ? (
+            /* Usuario logueado → Server Action directo */
+            <form action={joinGroupAction.bind(null, group.id)}>
+              <JoinButton />
+            </form>
+          ) : (
+            /* Usuario no logueado → login o registro */
+            <div className="space-y-2">
+              <Button asChild className="w-full gap-2">
+                <Link href={`/register?redirect=${encodeURIComponent(invitePath)}`}>
+                  <UserPlus className="size-4" />
+                  Crear cuenta y unirme
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full gap-2">
+                <Link href={`/login?redirect=${encodeURIComponent(invitePath)}`}>
+                  <LogIn className="size-4" />
+                  Ya tengo cuenta
+                </Link>
+              </Button>
+            </div>
           )}
-
-          <button
-            type="button"
-            className={cn(
-              "flex items-center justify-center gap-1 w-full text-xs text-muted-foreground",
-              "hover:text-foreground transition-colors duration-150",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded",
-              (isAccepting || isAccepted) && "pointer-events-none opacity-40"
-            )}
-            disabled={isAccepting || isAccepted}
-            aria-label="Ver cómo funciona Zimbio"
-          >
-            <HelpCircle className="size-3.5" aria-hidden="true" />
-            ¿Cómo funciona?
-          </button>
         </div>
+
       </CardContent>
     </Card>
   );
