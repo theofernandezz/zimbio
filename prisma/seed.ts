@@ -6,9 +6,11 @@ const adapter = new PrismaNeon({
 });
 const prisma = new PrismaClient({ adapter });
 
-// ─── Precios base SIN IVA (ARS) ───────────────────────────────────────────────
-// Verificados en mayo 2026. Actualizar manualmente cuando cambien.
-// Solo planes que permiten 2 o más usuarios (no existen planes individuales en Zimbio).
+// ─── Precios ARS con impuestos (tarjeta USD, junio 2026) ─────────────────────
+// Fuente: impuestito.org. Actualizar manualmente cuando cambien.
+// accessType:
+//   "credentials" → admin carga usuario/contraseña al vault
+//   "invitation"  → cada miembro se une con su propia cuenta (sin vault)
 
 const SERVICES = [
   {
@@ -16,19 +18,11 @@ const SERVICES = [
     type: "netflix",
     brandColor: "#E50914",
     plans: [
-      { name: "Estándar + 1 miembro extra", basePriceArs: 20_700, maxMembers: 3 },
-      { name: "Premium (4 pantallas)",      basePriceArs: 24_599, maxMembers: 4 },
-      { name: "Premium + 1 miembro extra",  basePriceArs: 31_240, maxMembers: 5 },
-      { name: "Premium + 2 miembros extra", basePriceArs: 37_880, maxMembers: 6 },
-    ],
-  },
-  {
-    name: "Spotify",
-    type: "spotify",
-    brandColor: "#1DB954",
-    plans: [
-      { name: "Dúo (2 cuentas)",     basePriceArs: 4_399, maxMembers: 2 },
-      { name: "Familiar (6 cuentas)", basePriceArs: 5_299, maxMembers: 6 },
+      { name: "Estándar (2 pantallas)",       basePriceArs: 18_449, maxMembers: 2, accessType: "credentials" },
+      { name: "Estándar + 1 miembro extra",   basePriceArs: 25_090, maxMembers: 3, accessType: "invitation" },
+      { name: "Premium (4 pantallas)",         basePriceArs: 24_599, maxMembers: 4, accessType: "credentials" },
+      { name: "Premium + 1 miembro extra",    basePriceArs: 31_240, maxMembers: 5, accessType: "invitation" },
+      { name: "Premium + 2 miembros extra",   basePriceArs: 37_880, maxMembers: 6, accessType: "invitation" },
     ],
   },
   {
@@ -36,7 +30,11 @@ const SERVICES = [
     type: "disney_plus",
     brandColor: "#0063E5",
     plans: [
-      { name: "Estándar (4 pantallas)", basePriceArs: 7_499, maxMembers: 4 },
+      { name: "Estándar con Anuncios (2 pantallas)", basePriceArs: 12_197, maxMembers: 2, accessType: "credentials" },
+      { name: "Estándar (2 pantallas)",              basePriceArs: 15_857, maxMembers: 2, accessType: "credentials" },
+      { name: "Premium (4 pantallas)",               basePriceArs: 24_396, maxMembers: 4, accessType: "credentials" },
+      { name: "Estándar + 1 miembro extra",         basePriceArs: 25_363, maxMembers: 3, accessType: "invitation" },
+      { name: "Premium + 1 miembro extra",          basePriceArs: 36_594, maxMembers: 5, accessType: "invitation" },
     ],
   },
   {
@@ -44,8 +42,34 @@ const SERVICES = [
     type: "hbo_max",
     brandColor: "#5822B4",
     plans: [
-      { name: "Estándar (2 pantallas)",  basePriceArs: 5_699, maxMembers: 2 },
-      { name: "Ultimate (4 pantallas)",  basePriceArs: 8_499, maxMembers: 4 },
+      { name: "Básico con Anuncios (2 pantallas)", basePriceArs:  9_090, maxMembers: 2, accessType: "credentials" },
+      { name: "Estándar (2 pantallas)",            basePriceArs: 11_796, maxMembers: 2, accessType: "credentials" },
+      { name: "Platino (4 pantallas)",             basePriceArs: 14_133, maxMembers: 4, accessType: "credentials" },
+    ],
+  },
+  {
+    name: "Paramount+",
+    type: "paramount_plus",
+    brandColor: "#0064FF",
+    plans: [
+      { name: "Estándar (3 pantallas)", basePriceArs: 6_862, maxMembers: 3, accessType: "credentials" },
+    ],
+  },
+  {
+    name: "Crunchyroll",
+    type: "crunchyroll",
+    brandColor: "#F47521",
+    plans: [
+      { name: "Mega Fan (4 pantallas)", basePriceArs: 7_502, maxMembers: 4, accessType: "credentials" },
+    ],
+  },
+  {
+    name: "Spotify",
+    type: "spotify",
+    brandColor: "#1DB954",
+    plans: [
+      { name: "Dúo (2 cuentas)",      basePriceArs:  5_411, maxMembers: 2, accessType: "invitation" },
+      { name: "Familiar (6 cuentas)", basePriceArs:  6_764, maxMembers: 6, accessType: "invitation" },
     ],
   },
   {
@@ -53,15 +77,16 @@ const SERVICES = [
     type: "youtube_premium",
     brandColor: "#FF0000",
     plans: [
-      { name: "Familiar (hasta 6 miembros)", basePriceArs: 3_599, maxMembers: 6 },
+      { name: "Dúo (2 miembros)",            basePriceArs:  8_240, maxMembers: 2, accessType: "invitation" },
+      { name: "Familiar (hasta 6 miembros)", basePriceArs: 12_668, maxMembers: 6, accessType: "invitation" },
     ],
   },
   {
-    name: "Apple Music",
-    type: "apple_music",
-    brandColor: "#FC3C44",
+    name: "Apple TV+",
+    type: "apple_tv_plus",
+    brandColor: "#000000",
     plans: [
-      { name: "Familiar (hasta 6 miembros)", basePriceArs: 2_799, maxMembers: 6 },
+      { name: "Family Sharing (hasta 6 miembros)", basePriceArs: 12_463, maxMembers: 6, accessType: "invitation" },
     ],
   },
 ] as const;
@@ -79,15 +104,19 @@ async function main() {
     for (const plan of svc.plans) {
       await prisma.servicePlan.upsert({
         where: {
-          // upsert por serviceId + name para evitar duplicados al re-seedear
           serviceId_name: { serviceId: service.id, name: plan.name },
         },
-        update: { basePriceArs: plan.basePriceArs, maxMembers: plan.maxMembers },
+        update: {
+          basePriceArs: plan.basePriceArs,
+          maxMembers: plan.maxMembers,
+          accessType: plan.accessType,
+        },
         create: {
           serviceId: service.id,
           name: plan.name,
           basePriceArs: plan.basePriceArs,
           maxMembers: plan.maxMembers,
+          accessType: plan.accessType,
         },
       });
     }

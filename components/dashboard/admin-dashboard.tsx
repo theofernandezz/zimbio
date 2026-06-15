@@ -120,11 +120,13 @@ function NewCycleButton({
   currentCycle,
   nextCycle,
   memberCount,
+  cyclePending,
 }: {
   groupId: string;
   currentCycle: string;
   nextCycle: string;
   memberCount: number;
+  cyclePending: boolean;
 }) {
   const boundAction = resetBillingCycleAction.bind(null, groupId);
   const [state, formAction, pending] = useActionState<ResetCycleState, FormData>(boundAction, {});
@@ -135,12 +137,21 @@ function NewCycleButton({
         <button
           type="button"
           className={cn(
-            "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded",
+            "flex items-center gap-1.5 text-xs font-medium transition-colors rounded",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            cyclePending
+              ? "text-amber-600 hover:text-amber-700 dark:text-amber-400"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
-          <RefreshCw className="size-3" />
-          Nuevo ciclo
+          {cyclePending && (
+            <span className="relative flex size-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex rounded-full size-2 bg-amber-500" />
+            </span>
+          )}
+          <RefreshCw className={cn("size-3", cyclePending && "text-amber-600 dark:text-amber-400")} />
+          {cyclePending ? `Iniciar ${nextCycle}` : "Nuevo ciclo"}
         </button>
       </AlertDialogTrigger>
 
@@ -368,6 +379,7 @@ interface AdminDashboardProps {
   group: GroupDetail;
   inviteUrl: string;
   userId: string;
+  cyclePending: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -386,7 +398,7 @@ function computeNextCycle(current: string): string {
   return `${MONTHS[nextIdx]} ${nextYear}`;
 }
 
-export function AdminDashboard({ group, inviteUrl, userId }: AdminDashboardProps) {
+export function AdminDashboard({ group, inviteUrl, userId, cyclePending }: AdminDashboardProps) {
   const nonAdminMembers = group.members.filter((m) => m.userId !== group.adminId);
   const paidCount = nonAdminMembers.filter((m) => m.paymentStatus === "paid").length;
   const totalToCollect = nonAdminMembers.reduce((s, m) => s + m.amountDue, 0);
@@ -453,6 +465,7 @@ export function AdminDashboard({ group, inviteUrl, userId }: AdminDashboardProps
                 currentCycle={group.billingCycle}
                 nextCycle={computeNextCycle(group.billingCycle)}
                 memberCount={nonAdminMembers.length}
+                cyclePending={cyclePending}
               />
             </div>
           </div>

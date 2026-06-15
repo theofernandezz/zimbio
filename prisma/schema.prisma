@@ -44,8 +44,9 @@ model ServicePlan {
   id           String   @id @default(cuid())
   serviceId    String   @map("service_id")
   name         String   // "Premium (4 pantallas)", "Familiar", "Dúo"
-  basePriceArs Float    @map("base_price_ars") // sin IVA — se actualiza manualmente
+  basePriceArs Float    @map("base_price_ars") // ARS con impuestos (tarjeta USD) — actualizar manualmente
   maxMembers   Int      @map("max_members")    // límite máximo del plan
+  accessType   String   @default("credentials") @map("access_type") // "credentials" | "invitation"
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   service Service @relation(fields: [serviceId], references: [id])
@@ -73,7 +74,7 @@ model Group {
   admin        User          @relation("GroupAdmin", fields: [adminId], references: [id])
   servicePlans ServicePlan[]
   members      GroupMember[]
-  vault        VaultEntry?
+  vaults       VaultEntry[]
 
   @@index([adminId])
   @@index([inviteToken])
@@ -104,12 +105,14 @@ model GroupMember {
 // Credenciales del servicio que el admin carga para los participantes
 // TODO: encriptar email y password con AES-256 antes de producción real
 model VaultEntry {
-  id       String @id @default(cuid())
-  groupId  String @unique @map("group_id")
-  email    String
-  password String // ⚠️ plaintext por ahora
+  id          String @id @default(cuid())
+  groupId     String @map("group_id")
+  serviceType String @map("service_type")
+  email       String
+  password    String
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
+  @@unique([groupId, serviceType])
   @@map("vault_entries")
 }

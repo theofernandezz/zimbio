@@ -15,7 +15,7 @@ export default async function AccesosPage() {
       ],
     },
     include: {
-      vault: { select: { email: true } },
+      vaults: { select: { email: true, serviceType: true } },
       servicePlans: {
         include: { service: { select: { name: true, type: true } } },
       },
@@ -23,13 +23,16 @@ export default async function AccesosPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  const accesosGroups = groups.map((g) => ({
+  const mapped = groups.map((g) => ({
     id: g.id,
     name: g.name,
     services: g.servicePlans.map((sp) => ({ type: sp.service.type, name: sp.service.name })),
     isAdmin: g.adminId === userId,
-    vault: g.vault ? { email: decrypt(g.vault.email) } : null,
+    vaults: g.vaults.map((v) => ({ serviceType: v.serviceType, email: decrypt(v.email) })),
   }));
+
+  const adminGroups = mapped.filter((g) => g.isAdmin);
+  const participantGroups = mapped.filter((g) => !g.isAdmin);
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
@@ -40,8 +43,8 @@ export default async function AccesosPage() {
         </p>
       </div>
 
-      {accesosGroups.length > 0 ? (
-        <AccesosClient groups={accesosGroups} />
+      {mapped.length > 0 ? (
+        <AccesosClient adminGroups={adminGroups} participantGroups={participantGroups} />
       ) : (
         <div className="flex flex-col items-center justify-center text-center py-20 space-y-4">
           <div className="flex items-center justify-center size-16 rounded-2xl bg-secondary">

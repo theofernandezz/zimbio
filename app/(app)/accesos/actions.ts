@@ -9,6 +9,7 @@ import { encrypt, decrypt } from "@/lib/encryption";
 // ─── Guardar accesos ──────────────────────────────────────────────────────────
 
 const accesosSchema = z.object({
+  serviceType: z.string().min(1, "El servicio es requerido"),
   email: z.string().min(1, "El usuario es requerido").trim(),
   password: z.string().min(1, "La contraseña es requerida"),
 });
@@ -29,21 +30,25 @@ export async function saveAccesosEntryAction(
   if (!group || group.adminId !== userId) return { error: "No autorizado" };
 
   const parsed = accesosSchema.safeParse({
+    serviceType: formData.get("serviceType"),
     email: formData.get("email"),
     password: formData.get("password"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
+  const { serviceType, email, password } = parsed.data;
+
   await prisma.vaultEntry.upsert({
-    where: { groupId },
+    where: { groupId_serviceType: { groupId, serviceType } },
     create: {
       groupId,
-      email: encrypt(parsed.data.email),
-      password: encrypt(parsed.data.password),
+      serviceType,
+      email: encrypt(email),
+      password: encrypt(password),
     },
     update: {
-      email: encrypt(parsed.data.email),
-      password: encrypt(parsed.data.password),
+      email: encrypt(email),
+      password: encrypt(password),
     },
   });
 
@@ -57,6 +62,7 @@ export type RevealPasswordResult = { error?: string; password?: string };
 
 export async function revealPasswordAction(
   groupId: string,
+  serviceType: string,
 ): Promise<RevealPasswordResult> {
   const { userId } = await requireAuth();
 
@@ -64,7 +70,7 @@ export async function revealPasswordAction(
     where: { id: groupId },
     select: {
       adminId: true,
-      vault: { select: { password: true } },
+      vaults: { where: { serviceType }, select: { password: true } },
       members: { where: { userId }, select: { id: true } },
     },
   });
@@ -74,10 +80,11 @@ export async function revealPasswordAction(
   const isMember = group.adminId === userId || group.members.length > 0;
   if (!isMember) return { error: "No autorizado" };
 
-  if (!group.vault) return { error: "Sin credenciales guardadas" };
+  const vault = group.vaults[0];
+  if (!vault) return { error: "Sin credenciales guardadas" };
 
   try {
-    return { password: decrypt(group.vault.password) };
+    return { password: decrypt(vault.password) };
   } catch {
     return { error: "Error al revelar la contraseña" };
   }
