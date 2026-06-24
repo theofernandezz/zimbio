@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, KeyRound, Settings, LogOut } from "lucide-react";
+import { Users, KeyRound, Settings, LogOut, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logoutAction } from "@/app/actions/logout";
 import type { UserPublic } from "@/lib/services/users";
@@ -47,6 +47,26 @@ export function SideNav({ user }: { user: UserPublic | null }) {
             </Link>
           );
         })}
+
+        <div className="pt-3 mt-3 border-t border-border">
+          {(() => {
+            const active = pathname === "/faq";
+            return (
+              <Link
+                href="/faq"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                )}
+              >
+                <HelpCircle className="size-4.5 shrink-0" strokeWidth={active ? 2.5 : 1.8} />
+                Preguntas frecuentes
+              </Link>
+            );
+          })()}
+        </div>
       </nav>
 
       {/* User + logout */}

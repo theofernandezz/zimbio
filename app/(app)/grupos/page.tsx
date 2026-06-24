@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, ChevronRight, CheckCircle2, Clock, Users } from "lucide-react";
+import { Plus, ChevronRight, CheckCircle2, Clock, Users, DollarSign, Shield, Share2 } from "lucide-react";
 
 import { requireAuth } from "@/lib/auth";
 import { getGroupsByUser, type GroupSummary } from "@/lib/services/groups";
@@ -207,6 +207,49 @@ export default async function GruposPage() {
                 </Link>
               </Button>
             </div>
+
+            {/* ── Introduccion breve ── */}
+            <div className="mt-6 w-full max-w-sm border border-border rounded-2xl bg-card p-5 text-left space-y-4">
+              <p className="text-sm font-semibold text-foreground text-center">
+                ¿Qué es Zimbio?
+              </p>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Share2 className="size-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Compartí suscripciones</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Armá un grupo con amigos o familia para dividir el costo de Netflix, Spotify, Disney+ y más.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <DollarSign className="size-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Calculamos todo automático</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Zimbio divide el costo con IVA incluido y te dice exactamente cuánto le toca pagar a cada uno.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Shield className="size-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Credenciales seguras</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Las contraseñas del servicio se guardan cifradas y solo los miembros del grupo pueden verlas.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
 
