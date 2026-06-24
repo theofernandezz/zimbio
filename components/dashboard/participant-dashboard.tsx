@@ -11,7 +11,19 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatARS } from "@/lib/tax-engine";
 import { cn } from "@/lib/utils";
-import { reportPaymentAction } from "@/app/(app)/dashboard/participante/actions";
+import { reportPaymentAction, leaveGroupAction } from "@/app/(app)/dashboard/participante/actions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { LogOut } from "lucide-react";
 import type { GroupDetail } from "@/lib/services/groups";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -284,6 +296,52 @@ export function ParticipantDashboard({
             </p>
           </CardContent>
         </Card>
+
+        {/* ── Salir del grupo ── */}
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-destructive/40",
+                "text-sm font-semibold text-destructive bg-destructive/5",
+                "hover:bg-destructive/10 transition-colors active:scale-[0.98]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2",
+              )}
+            >
+              <LogOut className="size-4" aria-hidden />
+              Salir del grupo
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                ¿Estas seguro de que queres salirte del grupo?
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    Si te vas, vas a perder acceso a las credenciales y no vas a poder volver a unirte sin un nuevo link de invitacion.
+                  </p>
+                  <p className="font-medium text-foreground/80">
+                    En caso de que ya hayas realizado el pago de este mes, no se te reembolsara lo abonado.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <form action={leaveGroupAction.bind(null, myMemberId, group.id)}>
+                <AlertDialogAction
+                  type="submit"
+                  className="w-full sm:w-auto bg-destructive hover:bg-destructive/90 text-white"
+                >
+                  Si, salir del grupo
+                </AlertDialogAction>
+              </form>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Trust footer */}
         <div className="flex items-center justify-center gap-2 py-2">

@@ -2,7 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import { useActionState, useState } from "react";
-import { Users, Copy, Check, CircleDollarSign, Clock, Pencil, RefreshCw } from "lucide-react";
+import { Users, Copy, Check, CircleDollarSign, Clock, Pencil, RefreshCw, UserMinus } from "lucide-react";
 
 import { ServiceLogo } from "@/components/shared/service-logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +14,10 @@ import {
   togglePaymentAction,
   updateMonthlyTotalAction,
   resetBillingCycleAction,
+  removeMemberAction,
   type UpdateTotalState,
   type ResetCycleState,
+  type RemoveMemberState,
 } from "@/app/(app)/dashboard/admin/actions";
 import {
   AlertDialog,
@@ -373,6 +375,78 @@ function EditPriceCard({
   );
 }
 
+// ─── Remove member button ─────────────────────────────────────────────────────
+
+function RemoveMemberButton({
+  memberId,
+  groupId,
+  memberName,
+  isPaid,
+}: {
+  memberId: string;
+  groupId: string;
+  memberName: string;
+  isPaid: boolean;
+}) {
+  const boundAction = removeMemberAction.bind(null, memberId, groupId);
+  const [state, formAction, pending] = useActionState<RemoveMemberState, FormData>(boundAction, {});
+  const firstName = memberName.split(" ")[0];
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <button
+          type="button"
+          disabled={isPaid}
+          title={isPaid ? "No podés sacar a un miembro que ya pagó" : `Sacar a ${firstName} del grupo`}
+          aria-label={`Sacar a ${firstName} del grupo`}
+          className={cn(
+            "flex items-center justify-center size-8 rounded-lg border transition-all duration-150 active:scale-95 shrink-0",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            isPaid
+              ? "border-border text-muted-foreground/30 cursor-not-allowed opacity-40"
+              : "border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 hover:bg-destructive/5",
+          )}
+        >
+          <UserMinus className="size-3.5" aria-hidden />
+        </button>
+      </AlertDialogTrigger>
+
+      {!isPaid && (
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              ¿Sacar a {firstName} del grupo?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  {firstName} va a perder acceso inmediato al grupo y a las credenciales. Esta accion no se puede deshacer.
+                </p>
+                {state.error && (
+                  <p className="font-medium text-destructive">{state.error}</p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <form action={formAction}>
+              <AlertDialogAction
+                type="submit"
+                disabled={pending}
+                className="w-full sm:w-auto bg-destructive hover:bg-destructive/90 text-white"
+              >
+                {pending ? "Sacando..." : `Sacar a ${firstName}`}
+              </AlertDialogAction>
+            </form>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      )}
+    </AlertDialog>
+  );
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface AdminDashboardProps {
@@ -567,6 +641,16 @@ export function AdminDashboard({ group, inviteUrl, userId, cyclePending }: Admin
                       <form action={togglePaymentAction.bind(null, member.id, group.id, newStatus)}>
                         <TogglePaymentButton isPaid={isPaid} memberName={member.user.name} />
                       </form>
+                    )}
+
+                    {/* Sacar miembro — solo no-admin */}
+                    {!isMe && (
+                      <RemoveMemberButton
+                        memberId={member.id}
+                        groupId={group.id}
+                        memberName={member.user.name}
+                        isPaid={isPaid}
+                      />
                     )}
 
                     {/* WhatsApp reminder — solo miembros pendientes */}

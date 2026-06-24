@@ -102,6 +102,37 @@ export async function updateMonthlyTotalAction(
   return { success: true };
 }
 
+export type RemoveMemberState = {
+  error?: string;
+  success?: boolean;
+};
+
+export async function removeMemberAction(
+  memberId: string,
+  groupId: string,
+  _prev: RemoveMemberState,
+  _formData: FormData,
+): Promise<RemoveMemberState> {
+  const { userId } = await requireAuth();
+
+  const member = await prisma.groupMember.findUnique({
+    where: { id: memberId },
+    select: { paymentStatus: true, group: { select: { adminId: true } } },
+  });
+
+  if (!member || member.group.adminId !== userId) {
+    return { error: "No autorizado" };
+  }
+
+  if (member.paymentStatus === "paid") {
+    return { error: "No podés sacar a un miembro que ya pagó. Esperá a que se renueve el ciclo." };
+  }
+
+  await prisma.groupMember.delete({ where: { id: memberId } });
+  revalidatePath(`/dashboard/admin?groupId=${groupId}`);
+  return { success: true };
+}
+
 export type ResetCycleState = {
   error?: string;
   success?: boolean;

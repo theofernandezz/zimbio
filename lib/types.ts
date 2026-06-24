@@ -8,6 +8,9 @@ export const SERVICES = {
   AppleTV: "apple_tv",
   YouTubePremium: "youtube_premium",
   AppleMusic: "apple_music",
+  ParamountPlus: "paramount_plus",
+  AppleTVPlus: "apple_tv_plus",
+  Crunchyroll: "crunchyroll",
   Other: "other",
 } as const;
 

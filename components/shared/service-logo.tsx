@@ -20,8 +20,8 @@ interface ServiceConfig {
   path: string | null;
   /** Custom JSX for services not in simple-icons */
   customContent?: React.ReactNode;
-  /** Background color hex (without #) */
-  bg: string;
+  /** Background color hex (without #). Omit for transparent. */
+  bg?: string;
 }
 
 
@@ -37,20 +37,9 @@ const SERVICE_CONFIG: Record<ServiceType, ServiceConfig> = {
   disney_plus: {
     path: null,
     customContent: (
-      <svg viewBox="0 0 24 24" fill="white" aria-hidden className="w-[65%] h-[65%]">
-        <text
-          x="2"
-          y="17"
-          fontFamily="'Arial Black', sans-serif"
-          fontWeight="900"
-          fontSize="13"
-          letterSpacing="-0.5"
-        >
-          D+
-        </text>
-      </svg>
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src="/logos/pngegg.png" alt="Disney+" className="w-full h-full object-cover scale-125" />
     ),
-    bg: "0063E5",
   },
   hbo_max: {
     path: siHbomax.path,
@@ -67,6 +56,27 @@ const SERVICE_CONFIG: Record<ServiceType, ServiceConfig> = {
   apple_tv: {
     path: siAppletv.path,
     bg: "1C1C1E",
+  },
+  apple_tv_plus: {
+    path: null,
+    customContent: (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src="/logos/AppleTV.png" alt="Apple TV+" className="w-full h-full object-cover scale-125" />
+    ),
+  },
+  crunchyroll: {
+    path: null,
+    customContent: (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src="/logos/Crunchyroll.jfif" alt="Crunchyroll" className="w-full h-full object-cover scale-125" />
+    ),
+  },
+  paramount_plus: {
+    path: null,
+    customContent: (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src="/logos/Paramount_Plus.svg" alt="Paramount+" className="w-full h-full object-cover scale-125" />
+    ),
   },
   other: {
     path: null,
@@ -101,7 +111,7 @@ export function ServiceLogo({ service, className, style }: ServiceLogoProps) {
         "inline-flex items-center justify-center overflow-hidden shrink-0",
         className,
       )}
-      style={{ backgroundColor: `#${config.bg}`, ...style }}
+      style={{ backgroundColor: config.bg ? `#${config.bg}` : undefined, ...style }}
       aria-hidden="true"
     >
       {config.path ? (
