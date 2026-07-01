@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { notifyAdminMemberJoined, notifyParticipantsMemberJoined } from "@/lib/email/notifications";
 import type { Prisma } from "@prisma/client";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -157,7 +158,10 @@ export async function joinGroup(
 ): Promise<void> {
   const group = await prisma.group.findUniqueOrThrow({
     where: { id: groupId },
-    include: { members: true },
+    include: {
+      admin: { select: { name: true, email: true } },
+      members: { include: { user: { select: { name: true, email: true } } } },
+    },
   });
 
   if (group.members.length >= group.maxMembers) {
@@ -169,6 +173,11 @@ export async function joinGroup(
     throw new Error("Ya sos miembro de este grupo");
   }
 
+  const newUser = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { name: true },
+  });
+
   const amountDue = Math.round(group.monthlyTotal / group.maxMembers);
 
   await prisma.groupMember.create({
@@ -179,4 +188,11 @@ export async function joinGroup(
       paymentStatus: "pending",
     },
   });
+
+  await notifyAdminMemberJoined(group.admin, group.name, newUser.name);
+  await notifyParticipantsMemberJoined(
+    group.members.map((m) => m.user),
+    group.name,
+    newUser.name,
+  );
 }

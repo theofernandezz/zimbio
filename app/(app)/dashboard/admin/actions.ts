@@ -3,29 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
+import { nextBillingCycle } from "@/lib/billing-cycle";
 import { prisma } from "@/lib/db";
+import { notifyAdminCycleRenewed, notifyParticipantsCycleRenewed } from "@/lib/email/notifications";
 import { updateMemberPaymentStatus } from "@/lib/services/groups";
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const MONTHS = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-] as const;
-
-function nextBillingCycle(current: string): string {
-  const [monthName, yearStr] = current.split(" ");
-  const idx = MONTHS.indexOf(monthName as typeof MONTHS[number]);
-  if (idx === -1) {
-    // Fallback: si el formato es inesperado, devolver el mes/año actual
-    const now = new Date();
-    return `${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
-  }
-  const year = parseInt(yearStr, 10);
-  const nextIdx = (idx + 1) % 12;
-  const nextYear = nextIdx === 0 ? year + 1 : year;
-  return `${MONTHS[nextIdx]} ${nextYear}`;
-}
 
 export async function togglePaymentAction(
   memberId: string,
@@ -148,7 +129,15 @@ export async function resetBillingCycleAction(
 
   const group = await prisma.group.findUnique({
     where: { id: groupId },
-    select: { adminId: true, billingCycle: true },
+    select: {
+      name: true,
+      adminId: true,
+      billingCycle: true,
+      admin: { select: { name: true, email: true } },
+      members: {
+        select: { userId: true, user: { select: { name: true, email: true } } },
+      },
+    },
   });
 
   if (!group || group.adminId !== userId) {
@@ -167,6 +156,13 @@ export async function resetBillingCycleAction(
       data: { paymentStatus: "pending", amountPaid: 0 },
     }),
   ]);
+
+  await notifyAdminCycleRenewed(group.admin, group.name, newCycle);
+  await notifyParticipantsCycleRenewed(
+    group.members.filter((m) => m.userId !== userId).map((m) => m.user),
+    group.name,
+    newCycle,
+  );
 
   revalidatePath(`/dashboard/admin?groupId=${groupId}`);
   return { success: true, newCycle };
