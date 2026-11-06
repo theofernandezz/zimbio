@@ -8,15 +8,13 @@ Built as a university project at UADE.
 
 ## Features
 
-- **Groups and invitations**: an admin creates a group for a family or shared plan and invites members with a unique invite link.
-- **Cost splitting**: the monthly total, with 21% VAT included, is split evenly among the members.
-- **Payment tracking**: each member is marked as pending, paid or overdue for every monthly billing cycle. The admin starts each new cycle.
-- **Two roles**:
-  - The **admin** manages members and can remove pending ones (not members who already paid).
-  - A **participant** sees their share and payment details (Mercado Pago alias / CVU) and can leave the group.
-- **Credential vault**: the admin stores the service's login, encrypted with AES-256-GCM, and only group members can see it.
-- **Email notifications**: emails are sent when someone joins or leaves a group and when a new cycle starts. A daily cron job reminds members of pending payments when the cycle is about to close.
-- **Authentication**: users sign in with email and password (bcrypt) or with Google OAuth. Sessions use HMAC-signed cookies.
+- An admin creates a group for a family or shared plan and invites members with a link.
+- The monthly total (21% VAT included) is split evenly among the members.
+- Each member is marked as pending, paid or overdue for every billing cycle. The admin starts each new cycle.
+- The admin can remove members who haven't paid yet. Participants see their share, the payment details (Mercado Pago alias / CVU) and can leave the group.
+- The admin stores the account's login in a vault, encrypted with AES-256-GCM. Only group members can see it.
+- Emails are sent when someone joins or leaves a group and when a new cycle starts. A daily cron job reminds members of pending payments before the cycle closes.
+- Login with email and password (bcrypt) or Google. Sessions use HMAC-signed cookies.
 
 ## Tech stack
 
